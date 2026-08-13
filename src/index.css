@@ -1,0 +1,275 @@
+@import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@layer base {
+  html, body, button, input, select, textarea {
+    font-family: 'Hind Siliguri', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    overscroll-behavior-y: none;
+    touch-action: manipulation;
+  }
+}
+
+/* Mobile Safe Area Bottom Padding Helper */
+.safe-area-pb {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+
+/* Light Mode Comprehensive Overrides */
+.light-mode {
+  color-scheme: light;
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+.light-mode body,
+.light-mode main {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+/* Headers, Sidebars, Navbars and Containers */
+.light-mode header,
+.light-mode navbar,
+.light-mode aside {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+
+.light-mode .bg-slate-900,
+.light-mode .bg-slate-900\/95,
+.light-mode .bg-slate-900\/90,
+.light-mode .bg-slate-900\/80 {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 4px 15px -1px rgba(0, 0, 0, 0.04), 0 2px 4px -2px rgba(0, 0, 0, 0.02) !important;
+}
+
+.light-mode .bg-slate-950,
+.light-mode .bg-slate-950\/80,
+.light-mode .bg-slate-950\/90 {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+.light-mode .bg-slate-800,
+.light-mode .bg-slate-800\/90,
+.light-mode .bg-slate-800\/80,
+.light-mode .bg-slate-800\/60,
+.light-mode .bg-slate-800\/50,
+.light-mode .bg-slate-800\/40 {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+
+.light-mode .border-slate-800,
+.light-mode .border-slate-800\/80,
+.light-mode .border-slate-700,
+.light-mode .border-slate-700\/80,
+.light-mode .border-slate-700\/50 {
+  border-color: #cbd5e1 !important;
+}
+
+/* General Text Contrast */
+.light-mode .text-slate-100,
+.light-mode .text-slate-200 {
+  color: #0f172a !important;
+}
+
+.light-mode .text-slate-300,
+.light-mode .text-slate-400 {
+  color: #334155 !important;
+}
+
+.light-mode .text-slate-500 {
+  color: #64748b !important;
+}
+
+.light-mode .text-white {
+  color: #0f172a !important;
+}
+
+/* Dark Hero Banners - Keep them dark with crisp white text */
+.light-mode .bg-gradient-to-r.from-slate-900,
+.light-mode .bg-gradient-to-br.from-slate-900,
+.light-mode .bg-gradient-to-r.from-slate-800 {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+  border-color: #334155 !important;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.2) !important;
+}
+
+.light-mode .bg-gradient-to-r.from-slate-900 .text-white,
+.light-mode .bg-gradient-to-br.from-slate-900 .text-white,
+.light-mode .bg-gradient-to-r.from-slate-800 .text-white {
+  color: #ffffff !important;
+}
+
+.light-mode .bg-gradient-to-r.from-slate-900 .text-slate-400,
+.light-mode .bg-gradient-to-br.from-slate-900 .text-slate-400,
+.light-mode .bg-gradient-to-r.from-slate-800 .text-slate-400 {
+  color: #cbd5e1 !important;
+}
+
+/* Buttons and Badges High-Contrast Fixes */
+.light-mode .bg-emerald-500 {
+  background-color: #10b981 !important;
+  color: #022c22 !important;
+}
+.light-mode .bg-emerald-500 * {
+  color: #022c22 !important;
+}
+
+.light-mode .bg-amber-500 {
+  background-color: #f59e0b !important;
+  color: #451a03 !important;
+}
+.light-mode .bg-amber-500 * {
+  color: #451a03 !important;
+}
+
+.light-mode .bg-rose-500 {
+  background-color: #f43f5e !important;
+  color: #ffffff !important;
+}
+.light-mode .bg-rose-500 * {
+  color: #ffffff !important;
+}
+
+.light-mode .bg-teal-500 {
+  background-color: #14b8a6 !important;
+  color: #042f2e !important;
+}
+.light-mode .bg-teal-500 * {
+  color: #042f2e !important;
+}
+
+/* Alert Boxes Overrides for Light Mode */
+/* Amber Alert Banners */
+.light-mode .bg-amber-950,
+.light-mode .bg-amber-950\/60,
+.light-mode .bg-amber-950\/80,
+.light-mode .bg-amber-900 {
+  background-color: #fffbeb !important;
+  border-color: #fde68a !important;
+}
+
+.light-mode .bg-amber-950 .text-amber-300,
+.light-mode .bg-amber-950\/60 .text-amber-300,
+.light-mode .bg-amber-950\/80 .text-amber-300,
+.light-mode .bg-amber-900 .text-amber-300 {
+  color: #92400e !important;
+}
+
+.light-mode .bg-amber-950 .text-amber-200\/80,
+.light-mode .bg-amber-950\/60 .text-amber-200\/80,
+.light-mode .bg-amber-900 .text-amber-200\/80 {
+  color: #b45309 !important;
+}
+
+/* Rose Alert Banners */
+.light-mode .bg-rose-950,
+.light-mode .bg-rose-950\/40,
+.light-mode .bg-rose-950\/60,
+.light-mode .bg-rose-900 {
+  background-color: #fff1f2 !important;
+  border-color: #fecdd3 !important;
+}
+
+.light-mode .bg-rose-950 .text-rose-300,
+.light-mode .bg-rose-950\/40 .text-rose-300,
+.light-mode .bg-rose-950\/40 .text-rose-400 {
+  color: #be123c !important;
+}
+
+/* Emerald Alert Banners */
+.light-mode .bg-emerald-950,
+.light-mode .bg-emerald-950\/40,
+.light-mode .bg-emerald-900 {
+  background-color: #ecfdf5 !important;
+  border-color: #a7f3d0 !important;
+}
+
+.light-mode .bg-emerald-950 .text-emerald-300,
+.light-mode .bg-emerald-950\/40 .text-emerald-400 {
+  color: #047857 !important;
+}
+
+/* Table Styling in Light Mode */
+.light-mode table thead tr,
+.light-mode table thead th {
+  background-color: #f1f5f9 !important;
+  color: #1e293b !important;
+  border-color: #cbd5e1 !important;
+}
+
+.light-mode table tbody tr {
+  border-color: #e2e8f0 !important;
+}
+
+.light-mode table tbody tr:hover {
+  background-color: #f8fafc !important;
+}
+
+/* Form Controls & Select Options */
+.light-mode input,
+.light-mode select,
+.light-mode textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+.light-mode option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+.light-mode input::placeholder,
+.light-mode textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+.light-mode input:focus,
+.light-mode select:focus,
+.light-mode textarea:focus {
+  border-color: #10b981 !important;
+  background-color: #ffffff !important;
+}
+
+/* Modal Backdrops & Cards */
+.light-mode .fixed.inset-0.bg-slate-950\/80,
+.light-mode .fixed.inset-0.bg-slate-900\/80 {
+  background-color: rgba(15, 23, 42, 0.5) !important;
+}
+
+.light-mode .shadow-xl,
+.light-mode .shadow-2xl {
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Print CSS */
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    font-family: 'Hind Siliguri', sans-serif !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  @page {
+    margin: 10mm;
+    size: auto;
+  }
+}

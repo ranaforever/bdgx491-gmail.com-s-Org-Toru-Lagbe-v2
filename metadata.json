@@ -1,0 +1,6 @@
+{
+  "name": "Tour লাগবে - Tour, Bus & Hotel Management System",
+  "description": "Comprehensive Tour Booking, Custom Bus Seat Layout Builder, Hotel Room Assignment, Agent Reports, and Ticket/Token Printing System",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
