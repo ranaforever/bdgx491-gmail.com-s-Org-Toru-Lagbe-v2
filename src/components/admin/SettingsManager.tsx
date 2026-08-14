@@ -1,27 +1,65 @@
 import React, { useState } from 'react';
 import { SystemSettings } from '../../types';
 import { StorageService } from '../../services/storage';
-import { Save, CheckCircle2, RotateCcw, Download, Upload, ShieldCheck, Database } from 'lucide-react';
+import { useToast } from '../../context/ToastContext';
+import {
+  Save,
+  CheckCircle2,
+  RotateCcw,
+  Download,
+  Upload,
+  ShieldCheck,
+  Database,
+  Trash2,
+  AlertTriangle,
+  X,
+  Loader2,
+} from 'lucide-react';
 
 export const SettingsManager: React.FC = () => {
+  const { showToast } = useToast();
   const [settings, setSettings] = useState<SystemSettings>(StorageService.getSettings());
-  const [successMsg, setSuccessMsg] = useState('');
-  const [errorMsg, setErrorMsg] = useState('');
+  
+  // Wipe All Data Modal State
+  const [showWipeModal, setShowWipeModal] = useState<boolean>(false);
+  const [wipeConfirmText, setWipeConfirmText] = useState<string>('');
+  const [isWiping, setIsWiping] = useState<boolean>(false);
 
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
     StorageService.saveSettings(settings);
-    setSuccessMsg('সিস্টেম সেটিংস সফলভাবে আপডেট ও সংরক্ষিত হয়েছে!');
-    setTimeout(() => setSuccessMsg(''), 3000);
+    showToast('সিস্টেম সেটিংস সফলভাবে আপডেট ও সংরক্ষিত হয়েছে!', 'success');
   };
 
   const handleResetData = () => {
     if (confirm('আপনি কি নিশ্চিত যে সকল ডেমো ডাটা রিসেট করতে চান? আপনার তৈরি করা ডাটা হারিয়ে যেতে পারে!')) {
       StorageService.resetAll();
       setSettings(StorageService.getSettings());
-      setSuccessMsg('সকল ডাটা সফলভাবে রিসেট ও রি-ইনিশিয়ালাইজ করা হয়েছে!');
-      setTimeout(() => setSuccessMsg(''), 3000);
-      window.location.reload();
+      showToast('সকল ডাটা সফলভাবে রিসেট ও রি-ইনিশিয়ালাইজ করা হয়েছে!', 'info');
+      setTimeout(() => window.location.reload(), 1000);
+    }
+  };
+
+  const handleWipeAllData = async () => {
+    if (wipeConfirmText.trim().toUpperCase() !== 'WIPE ALL' && wipeConfirmText.trim() !== 'মুছে ফেলুন') {
+      showToast('নিশ্চিত করতে বক্সে "WIPE ALL" অথবা "মুছে ফেলুন" টাইপ করুন!', 'warning');
+      return;
+    }
+
+    try {
+      setIsWiping(true);
+      await StorageService.wipeAllData();
+      showToast('⚠️ সিস্টেমের সকল ডাটা সফলভাবে মুছে ফেলা (Wipe) হয়েছে!', 'success');
+      setShowWipeModal(false);
+      setWipeConfirmText('');
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } catch (err) {
+      console.error(err);
+      showToast('ডাটা ওয়াইপ করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।', 'error');
+    } finally {
+      setIsWiping(false);
     }
   };
 
@@ -44,6 +82,7 @@ export const SettingsManager: React.FC = () => {
     a.download = `tour_lagbe_backup_${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
+    showToast('ব্যাকআপ ডাউনলোড সম্পন্ন হয়েছে!', 'success');
   };
 
   const handleImportBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -62,14 +101,13 @@ export const SettingsManager: React.FC = () => {
           if (json.busTemplates) StorageService.saveTemplates(json.busTemplates);
           if (json.settings) StorageService.saveSettings(json.settings);
 
-          setSuccessMsg('ব্যাকআপ ফাইল হতে ডাটা সফলভাবে রিস্টোর হয়েছে!');
-          setTimeout(() => setSuccessMsg(''), 3000);
-          window.location.reload();
+          showToast('ব্যাকআপ ফাইল হতে ডাটা সফলভাবে রিস্টোর হয়েছে!', 'success');
+          setTimeout(() => window.location.reload(), 1000);
         } else {
-          setErrorMsg('অবৈধ ব্যাকআপ ফাইল ফরম্যাট!');
+          showToast('অবৈধ ব্যাকআপ ফাইল ফরম্যাট!', 'error');
         }
       } catch (err) {
-        setErrorMsg('ফাইল রিড করতে ব্যর্থ হয়েছে! সঠিক JSON ফাইল নির্বাচন করুন।');
+        showToast('ফাইল রিড করতে ব্যর্থ হয়েছে! সঠিক JSON ফাইল নির্বাচন করুন।', 'error');
       }
     };
     reader.readAsText(file);
@@ -96,20 +134,6 @@ export const SettingsManager: React.FC = () => {
           <span>পরিবর্তন সেভ করুন</span>
         </button>
       </div>
-
-      {successMsg && (
-        <div className="bg-emerald-950/60 border border-emerald-800 text-emerald-300 text-xs p-3.5 rounded-2xl font-semibold flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4" />
-          <span>{successMsg}</span>
-        </div>
-      )}
-
-      {errorMsg && (
-        <div className="bg-rose-950/60 border border-rose-800 text-rose-300 text-xs p-3.5 rounded-2xl font-semibold flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-rose-400" />
-          <span>{errorMsg}</span>
-        </div>
-      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left Form: Business Identity */}
@@ -224,26 +248,155 @@ export const SettingsManager: React.FC = () => {
           </div>
 
           {/* Reset Factory Defaults */}
-          <div className="bg-slate-900 border border-rose-900/40 rounded-3xl p-6 shadow-xl space-y-4">
-            <h2 className="text-sm font-bold text-rose-400 border-b border-slate-800 pb-3 flex items-center gap-2">
-              <RotateCcw className="w-4 h-4 text-rose-400" />
-              <span>ডেমো ডাটা রিসেট (Danger Zone)</span>
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
+            <h2 className="text-sm font-bold text-amber-400 border-b border-slate-800 pb-3 flex items-center gap-2">
+              <RotateCcw className="w-4 h-4 text-amber-400" />
+              <span>ডেমো ডাটা রিসেট (Factory Reset)</span>
             </h2>
 
             <p className="text-xs text-slate-400 leading-relaxed">
-              সকল ডাটা মুছে দিয়ে অরিজিনাল ডেমো ডাটা রিসেট করতে নিচের বাটনে ক্লিক করুন।
+              সিস্টেমে প্রাথমিক নমুনা ট্যুর, এজেন্ট, এবং ডেমো বুকিং ডাটা পুনরায় রিলোড করতে চাইলে রিসেট করুন।
             </p>
 
             <button
               onClick={handleResetData}
-              className="w-full py-2.5 bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-800/60 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all"
+              className="w-full py-2.5 bg-amber-950/40 hover:bg-amber-900/60 text-amber-300 border border-amber-800/50 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
             >
               <RotateCcw className="w-4 h-4" />
-              <span>সকল ডেমো ডাটা রিসেট করুন</span>
+              <span>নমুনা / ডেমো ডাটা রিসেট করুন</span>
+            </button>
+          </div>
+
+          {/* Wipe All Data - Danger Zone */}
+          <div className="bg-slate-900 border border-rose-900/60 rounded-3xl p-6 shadow-xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h2 className="text-sm font-bold text-rose-400 flex items-center gap-2">
+                <Trash2 className="w-4 h-4 text-rose-400" />
+                <span>সকল ডাটা সম্পূর্ণ মুছে ফেলুন (Wipe All Data)</span>
+              </h2>
+              <span className="bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[10px] font-black px-2 py-0.5 rounded">
+                DANGER ZONE
+              </span>
+            </div>
+
+            <p className="text-xs text-slate-400 leading-relaxed">
+              এই অপশন ব্যবহার করলে আপনার সকল বুকিং, ট্যুর, হোটেল, এজেন্ট এবং বাস সিট রেকর্ডস স্থায়ীভাবে একবারে সম্পূর্ণ মুছে (Wipe out) যাবে।
+            </p>
+
+            <button
+              onClick={() => {
+                setWipeConfirmText('');
+                setShowWipeModal(true);
+              }}
+              className="w-full py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all shadow-lg shadow-rose-600/30 cursor-pointer"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>এক ক্লিকে সকল ডাটা মুছুন (Wipe All)</span>
             </button>
           </div>
         </div>
       </div>
+
+      {/* Wipe All Data Confirmation Modal */}
+      {showWipeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
+          <div className="bg-slate-900 border border-rose-900/80 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-5 relative">
+            <button
+              onClick={() => setShowWipeModal(false)}
+              className="absolute right-5 top-5 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-rose-500/20 border border-rose-500/30 flex items-center justify-center shrink-0 text-rose-400">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-black text-white">
+                  আপনি কি সত্যিই সব ডাটা একবারে মুছে ফেলতে চান?
+                </h3>
+                <p className="text-xs text-rose-400 font-semibold">
+                  এই কাজটি অপরিবর্তনীয় (Irreversible)! মুছে ফেলা ডাটা আর ফেরত পাওয়া যাবে না।
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-slate-950/80 border border-slate-800 p-4 rounded-2xl space-y-2 text-xs text-slate-300">
+              <div className="font-bold text-slate-200">নিচের সকল রেকর্ডস স্থায়ীভাবে মুছে যাবে:</div>
+              <ul className="list-disc list-inside space-y-1 text-slate-400 pl-1">
+                <li>সকল ট্যুর ও ইভেন্ট প্যাকেজ</li>
+                <li>সকল বুকিং, যাত্রী তালিকা ও পেমেন্ট রেকর্ড</li>
+                <li>সকল এজেন্ট ও হোস্ট বুকিং আইডি</li>
+                <li>সকল হোটেল ও রুম অ্যাসাইনমেন্ট</li>
+                <li>সকল কাস্টম বাস লেআউট ও নোটিফিকেশন</li>
+              </ul>
+            </div>
+
+            {/* Backup option before wipe */}
+            <div className="bg-emerald-950/30 border border-emerald-500/30 p-3 rounded-2xl flex items-center justify-between gap-3 text-xs">
+              <span className="text-emerald-300 text-[11px]">
+                মুছে ফেলার আগে একটি ব্যাকআপ ফাইল সেভ করে রাখতে চান?
+              </span>
+              <button
+                type="button"
+                onClick={handleExportBackup}
+                className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-1.5 shrink-0"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>ব্যাকআপ ডাউনলোড</span>
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-slate-300">
+                নিশ্চিত করতে নিচে <span className="text-rose-400 font-mono">WIPE ALL</span> অথবা <span className="text-rose-400 font-mono">মুছে ফেলুন</span> লিখুন:
+              </label>
+              <input
+                type="text"
+                value={wipeConfirmText}
+                onChange={(e) => setWipeConfirmText(e.target.value)}
+                placeholder="এখানে WIPE ALL লিখুন"
+                className="w-full bg-slate-950 border border-rose-800/60 rounded-xl px-4 py-2.5 text-rose-300 font-mono font-bold text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowWipeModal(false)}
+                disabled={isWiping}
+                className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition-all"
+              >
+                বাতিল করুন
+              </button>
+
+              <button
+                type="button"
+                onClick={handleWipeAllData}
+                disabled={
+                  isWiping ||
+                  (wipeConfirmText.trim().toUpperCase() !== 'WIPE ALL' &&
+                    wipeConfirmText.trim() !== 'মুছে ফেলুন')
+                }
+                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-black rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-rose-600/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              >
+                {isWiping ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>মুছে ফেলা হচ্ছে...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    <span>হ্যাঁ, সম্পূর্ণ ডাটা মুছে ফেলুন</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Hotel, HotelRoom, RoomType, UserSession } from '../../types';
 import { StorageService } from '../../services/storage';
 import { CSVExportService } from '../../utils/csvExport';
+import { useToast } from '../../context/ToastContext';
 import {
   Building2,
   Plus,
@@ -21,6 +22,7 @@ interface HotelManagerProps {
 }
 
 export const HotelManager: React.FC<HotelManagerProps> = ({ session }) => {
+  const { showToast } = useToast();
   const isAdmin = session?.role === 'admin';
   const [hotels, setHotels] = useState<Hotel[]>(StorageService.getHotels());
   const tours = StorageService.getTours();
@@ -53,13 +55,14 @@ export const HotelManager: React.FC<HotelManagerProps> = ({ session }) => {
   };
 
   const handleDeleteHotel = (hotelId: string, hotelName: string) => {
-    if (confirm(`আপনি কি নিশ্চিত যে "${hotelName}" হোটেলটি পুরোপুরি ডিলিট করতে চান?`)) {
-      const updated = hotels.filter((h) => h.id !== hotelId);
-      setHotels(updated);
-      StorageService.saveHotels(updated);
-      if (activeHotelId === hotelId && updated.length > 0) {
-        setActiveHotelId(updated[0].id);
+    if (confirm(`আপনি কি নিশ্চিত যে "${hotelName}" হোটেলটি স্থায়ীভাবে মুছে ফেলতে চান?`)) {
+      StorageService.deleteHotel(hotelId);
+      const remaining = StorageService.getHotels();
+      setHotels(remaining);
+      if (activeHotelId === hotelId && remaining.length > 0) {
+        setActiveHotelId(remaining[0].id);
       }
+      showToast(`"${hotelName}" হোটেল স্থায়ীভাবে মুছে ফেলা হয়েছে!`, 'info');
     }
   };
 
@@ -79,6 +82,7 @@ export const HotelManager: React.FC<HotelManagerProps> = ({ session }) => {
     StorageService.saveHotels(updated);
     setActiveHotelId(hotelObj.id);
     setIsHotelModalOpen(false);
+    showToast('হোটেলের তথ্য সফলভাবে সংরক্ষণ করা হয়েছে!', 'success');
   };
 
   // Room CRUD inside Active Hotel

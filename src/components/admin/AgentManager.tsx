@@ -3,9 +3,11 @@ import { Agent } from '../../types';
 import { StorageService } from '../../services/storage';
 import { CalculationUtils } from '../../utils/calculations';
 import { CSVExportService } from '../../utils/csvExport';
+import { useToast } from '../../context/ToastContext';
 import { Users, Plus, CheckCircle2, Building2, Phone, Edit2, Trash2, ShieldCheck, Download } from 'lucide-react';
 
 export const AgentManager: React.FC = () => {
+  const { showToast } = useToast();
   const [agents, setAgents] = useState<Agent[]>(StorageService.getAgents());
   const bookings = StorageService.getBookings();
 
@@ -31,10 +33,10 @@ export const AgentManager: React.FC = () => {
   };
 
   const handleDeleteAgent = (id: string, name: string) => {
-    if (confirm(`আপনি কি নিশ্চিত যে এজেন্ট "${name}" মুছে ফেলতে চান?`)) {
-      const updated = agents.filter((a) => a.id !== id);
-      setAgents(updated);
-      StorageService.saveAgents(updated);
+    if (confirm(`আপনি কি নিশ্চিত যে এজেন্ট "${name}" স্থায়ীভাবে মুছে ফেলতে চান?`)) {
+      StorageService.deleteAgent(id);
+      setAgents(StorageService.getAgents());
+      showToast(`এজেন্ট "${name}" স্থায়ীভাবে মুছে ফেলা হয়েছে!`, 'info');
     }
   };
 
@@ -57,6 +59,7 @@ export const AgentManager: React.FC = () => {
     setAgents(updated);
     StorageService.saveAgents(updated);
     setIsModalOpen(false);
+    showToast('এজেন্ট প্রোফাইল সফলভাবে সংরক্ষণ করা হয়েছে!', 'success');
   };
 
   return (

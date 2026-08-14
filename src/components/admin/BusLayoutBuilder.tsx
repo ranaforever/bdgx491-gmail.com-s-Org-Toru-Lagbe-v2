@@ -3,6 +3,7 @@ import { BusLayoutTemplate, BusSeat, SeatType, BusType } from '../../types';
 import { StorageService } from '../../services/storage';
 import { SeatMap } from '../booking/SeatMap';
 import { ConfirmationModal } from '../common/ConfirmationModal';
+import { useToast } from '../../context/ToastContext';
 import {
   Bus,
   Plus,
@@ -17,6 +18,7 @@ import {
 } from 'lucide-react';
 
 export const BusLayoutBuilder: React.FC = () => {
+  const { showToast } = useToast();
   const [templates, setTemplates] = useState<BusLayoutTemplate[]>(StorageService.getTemplates());
   const allBookings = StorageService.getBookings();
 
@@ -264,17 +266,16 @@ export const BusLayoutBuilder: React.FC = () => {
   // Delete current template
   const handleDeleteTemplate = (id: string) => {
     if (templates.length <= 1) {
-      alert('কমপক্ষে একটি বাস লেআউট টেমপ্লেট থাকা আবশ্যক!');
+      showToast('কমপক্ষে একটি বাস লেআউট টেমপ্লেট থাকা আবশ্যক!', 'warning');
       return;
     }
-    if (confirm('আপনি কি নিশ্চিত যে এই লেআউট টেমপ্লেটটি মুছে ফেলতে চান?')) {
-      const remaining = templates.filter((t) => t.id !== id);
+    if (confirm('আপনি কি নিশ্চিত যে এই লেআউট টেমপ্লেটটি স্থায়ীভাবে মুছে ফেলতে চান?')) {
+      StorageService.deleteTemplate(id);
+      const remaining = StorageService.getTemplates();
       setTemplates(remaining);
-      StorageService.saveTemplates(remaining);
       setActiveTemplateId(remaining[0].id);
       setEditingLayout(JSON.parse(JSON.stringify(remaining[0])));
-      setSaveSuccess('লেআউট টেমপ্লেট মুছে ফেলা হয়েছে!');
-      setTimeout(() => setSaveSuccess(''), 3000);
+      showToast('বাস লেআউট টেমপ্লেট স্থায়ীভাবে মুছে ফেলা হয়েছে!', 'info');
     }
   };
 

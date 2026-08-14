@@ -7,6 +7,7 @@ import {
   SystemSettings,
   Passenger,
   UserSession,
+  BookingNotification,
 } from '../types';
 import {
   INITIAL_BUS_TEMPLATES,
@@ -26,6 +27,8 @@ const KEYS = {
   BOOKINGS: 'tour_lagbe_bookings_v1',
   SETTINGS: 'tour_lagbe_settings_v1',
   AUTH: 'tour_lagbe_auth_v1',
+  THEME: 'tour_lagbe_theme_v1',
+  NOTIFICATIONS: 'tour_lagbe_notifications_v1',
 };
 
 // Safe JSON parser helper
@@ -51,28 +54,9 @@ function setStorageItem<T>(key: string, value: T): void {
 }
 
 export const StorageService = {
-  // Initialize default data if empty & pull latest from Supabase if available
+  // Initialize data and sync with Supabase
   init: () => {
-    if (!localStorage.getItem(KEYS.TEMPLATES)) {
-      setStorageItem(KEYS.TEMPLATES, INITIAL_BUS_TEMPLATES);
-    }
-    if (!localStorage.getItem(KEYS.TOURS)) {
-      setStorageItem(KEYS.TOURS, INITIAL_TOURS);
-    }
-    if (!localStorage.getItem(KEYS.HOTELS)) {
-      setStorageItem(KEYS.HOTELS, INITIAL_HOTELS);
-    }
-    if (!localStorage.getItem(KEYS.AGENTS)) {
-      setStorageItem(KEYS.AGENTS, INITIAL_AGENTS);
-    }
-    if (!localStorage.getItem(KEYS.BOOKINGS)) {
-      setStorageItem(KEYS.BOOKINGS, INITIAL_BOOKINGS);
-    }
-    if (!localStorage.getItem(KEYS.SETTINGS)) {
-      setStorageItem(KEYS.SETTINGS, INITIAL_SETTINGS);
-    }
-
-    // Background sync from Supabase
+    // Attempt background sync first
     StorageService.syncFromSupabase();
   },
 
@@ -88,14 +72,29 @@ export const StorageService = {
         SupabaseService.fetchSettings(),
       ]);
 
-      if (templates && templates.length > 0) setStorageItem(KEYS.TEMPLATES, templates);
-      if (tours && tours.length > 0) setStorageItem(KEYS.TOURS, tours);
-      if (hotels && hotels.length > 0) setStorageItem(KEYS.HOTELS, hotels);
-      if (agents && agents.length > 0) setStorageItem(KEYS.AGENTS, agents);
-      if (bookings && bookings.length > 0) setStorageItem(KEYS.BOOKINGS, bookings);
-      if (settings) setStorageItem(KEYS.SETTINGS, settings);
+      // If Supabase response is non-null (meaning DB query succeeded), override LocalStorage
+      if (templates !== null) setStorageItem(KEYS.TEMPLATES, templates);
+      if (tours !== null) setStorageItem(KEYS.TOURS, tours);
+      if (hotels !== null) setStorageItem(KEYS.HOTELS, hotels);
+      if (agents !== null) setStorageItem(KEYS.AGENTS, agents);
+      if (bookings !== null) setStorageItem(KEYS.BOOKINGS, bookings);
+      if (settings !== null) setStorageItem(KEYS.SETTINGS, settings);
+
+      // Seed initial data ONLY IF database was totally fresh/uninitialized AND LocalStorage is empty
+      const hasLocalData = localStorage.getItem(KEYS.TOURS) !== null;
+      const isSupabaseEmpty =
+        (!tours || tours.length === 0) &&
+        (!bookings || bookings.length === 0) &&
+        (!agents || agents.length === 0);
+
+      const hasSeededBefore = localStorage.getItem('tour_lagbe_seeded_v2') === 'true';
+
+      if (!hasLocalData && isSupabaseEmpty && !hasSeededBefore) {
+        localStorage.setItem('tour_lagbe_seeded_v2', 'true');
+        StorageService.resetAll();
+      }
     } catch (e) {
-      console.warn('Supabase sync warning:', e);
+      console.warn('Supabase sync error:', e);
     }
   },
 
@@ -117,11 +116,31 @@ export const StorageService = {
     SupabaseService.saveSettings(INITIAL_SETTINGS);
   },
 
+  // Wipe all system data completely (empty state)
+  wipeAllData: async (): Promise<void> => {
+    setStorageItem(KEYS.TEMPLATES, []);
+    setStorageItem(KEYS.TOURS, []);
+    setStorageItem(KEYS.HOTELS, []);
+    setStorageItem(KEYS.AGENTS, []);
+    setStorageItem(KEYS.BOOKINGS, []);
+    setStorageItem(KEYS.NOTIFICATIONS, []);
+    localStorage.setItem('tour_lagbe_seeded_v2', 'true');
+
+    // Wipe remote Supabase DB records
+    await SupabaseService.wipeAllData();
+    window.dispatchEvent(new Event('tour_lagbe_storage_updated'));
+  },
+
   // Templates
   getTemplates: (): BusLayoutTemplate[] => getStorageItem(KEYS.TEMPLATES, INITIAL_BUS_TEMPLATES),
   saveTemplates: (templates: BusLayoutTemplate[]) => {
     setStorageItem(KEYS.TEMPLATES, templates);
     SupabaseService.saveTemplates(templates);
+  },
+  deleteTemplate: (id: string) => {
+    const remaining = StorageService.getTemplates().filter((t) => t.id !== id);
+    setStorageItem(KEYS.TEMPLATES, remaining);
+    SupabaseService.deleteTemplate(id);
   },
   getTemplateById: (id: string): BusLayoutTemplate | undefined =>
     StorageService.getTemplates().find((t) => t.id === id),
@@ -132,6 +151,11 @@ export const StorageService = {
     setStorageItem(KEYS.TOURS, tours);
     SupabaseService.saveTours(tours);
   },
+  deleteTour: (id: string) => {
+    const remaining = StorageService.getTours().filter((t) => t.id !== id);
+    setStorageItem(KEYS.TOURS, remaining);
+    SupabaseService.deleteTour(id);
+  },
   getTourById: (id: string): Tour | undefined =>
     StorageService.getTours().find((t) => t.id === id),
 
@@ -140,6 +164,11 @@ export const StorageService = {
   saveHotels: (hotels: Hotel[]) => {
     setStorageItem(KEYS.HOTELS, hotels);
     SupabaseService.saveHotels(hotels);
+  },
+  deleteHotel: (id: string) => {
+    const remaining = StorageService.getHotels().filter((h) => h.id !== id);
+    setStorageItem(KEYS.HOTELS, remaining);
+    SupabaseService.deleteHotel(id);
   },
   getHotelById: (id: string): Hotel | undefined =>
     StorageService.getHotels().find((h) => h.id === id),
@@ -150,6 +179,11 @@ export const StorageService = {
     setStorageItem(KEYS.AGENTS, agents);
     SupabaseService.saveAgents(agents);
   },
+  deleteAgent: (id: string) => {
+    const remaining = StorageService.getAgents().filter((a) => a.id !== id);
+    setStorageItem(KEYS.AGENTS, remaining);
+    SupabaseService.deleteAgent(id);
+  },
   getAgentById: (id: string): Agent | undefined =>
     StorageService.getAgents().find((a) => a.id === id || a.code === id),
 
@@ -158,6 +192,11 @@ export const StorageService = {
   saveBookings: (bookings: Booking[]) => {
     setStorageItem(KEYS.BOOKINGS, bookings);
     SupabaseService.saveBookings(bookings);
+  },
+  deleteBooking: (id: string) => {
+    const remaining = StorageService.getBookings().filter((b) => b.id !== id);
+    setStorageItem(KEYS.BOOKINGS, remaining);
+    SupabaseService.deleteBooking(id);
   },
   getBookingById: (id: string): Booking | undefined =>
     StorageService.getBookings().find((b) => b.id === id),
@@ -181,6 +220,43 @@ export const StorageService = {
   getAuthSession: (): UserSession | null => getStorageItem<UserSession | null>(KEYS.AUTH, null),
   saveAuthSession: (session: UserSession) => setStorageItem(KEYS.AUTH, session),
   clearAuthSession: () => localStorage.removeItem(KEYS.AUTH),
+
+  // Theme
+  getTheme: (): 'dark' | 'light' => {
+    const saved = getStorageItem<'dark' | 'light'>(KEYS.THEME, 'dark');
+    return saved === 'light' ? 'light' : 'dark';
+  },
+  saveTheme: (theme: 'dark' | 'light') => setStorageItem(KEYS.THEME, theme),
+
+  // Real-time Notifications
+  getNotifications: (): BookingNotification[] =>
+    getStorageItem<BookingNotification[]>(KEYS.NOTIFICATIONS, []),
+  saveNotifications: (notifications: BookingNotification[]) =>
+    setStorageItem(KEYS.NOTIFICATIONS, notifications),
+  addNotification: (notification: BookingNotification) => {
+    const list = StorageService.getNotifications();
+    if (!list.some((n) => n.id === notification.id || (n.bookingId && n.bookingId === notification.bookingId))) {
+      const updated = [notification, ...list].slice(0, 50);
+      setStorageItem(KEYS.NOTIFICATIONS, updated);
+      window.dispatchEvent(new Event('tour_lagbe_notification_added'));
+    }
+  },
+  markNotificationAsRead: (id: string) => {
+    const list = StorageService.getNotifications();
+    const updated = list.map((n) => (n.id === id ? { ...n, isRead: true } : n));
+    setStorageItem(KEYS.NOTIFICATIONS, updated);
+    window.dispatchEvent(new Event('tour_lagbe_notification_added'));
+  },
+  markAllNotificationsAsRead: () => {
+    const list = StorageService.getNotifications();
+    const updated = list.map((n) => ({ ...n, isRead: true }));
+    setStorageItem(KEYS.NOTIFICATIONS, updated);
+    window.dispatchEvent(new Event('tour_lagbe_notification_added'));
+  },
+  clearNotifications: () => {
+    setStorageItem(KEYS.NOTIFICATIONS, []);
+    window.dispatchEvent(new Event('tour_lagbe_notification_added'));
+  },
 
   // Export full backup
   exportBackup: () => {

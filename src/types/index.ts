@@ -211,3 +211,16 @@ export interface FilterState {
   dateFrom: string;
   dateTo: string;
 }
+
+export interface BookingNotification {
+  id: string;
+  bookingId: string;
+  customerName: string;
+  customerPhone?: string;
+  seats: string[];
+  totalAmount: number;
+  agentName?: string;
+  tourName?: string;
+  createdAt: string;
+  isRead: boolean;
+}

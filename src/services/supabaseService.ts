@@ -323,4 +323,67 @@ export const SupabaseService = {
       return false;
     }
   },
+
+  // Permanent Delete Item Handlers
+  deleteTour: async (id: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase.from('tours').delete().eq('id', id);
+      return !error;
+    } catch {
+      return false;
+    }
+  },
+
+  deleteBooking: async (id: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase.from('bookings').delete().eq('id', id);
+      return !error;
+    } catch {
+      return false;
+    }
+  },
+
+  deleteHotel: async (id: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase.from('hotels').delete().eq('id', id);
+      return !error;
+    } catch {
+      return false;
+    }
+  },
+
+  deleteAgent: async (id: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase.from('agents').delete().eq('id', id);
+      return !error;
+    } catch {
+      return false;
+    }
+  },
+
+  deleteTemplate: async (id: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase.from('bus_layout_templates').delete().eq('id', id);
+      return !error;
+    } catch {
+      return false;
+    }
+  },
+
+  // Wipe All Data from all tables
+  wipeAllData: async (): Promise<boolean> => {
+    try {
+      await Promise.allSettled([
+        supabase.from('bookings').delete().neq('id', '___safe_wipe_guard___'),
+        supabase.from('tours').delete().neq('id', '___safe_wipe_guard___'),
+        supabase.from('hotels').delete().neq('id', '___safe_wipe_guard___'),
+        supabase.from('agents').delete().neq('id', '___safe_wipe_guard___'),
+        supabase.from('bus_layout_templates').delete().neq('id', '___safe_wipe_guard___'),
+      ]);
+      return true;
+    } catch (e) {
+      console.error('Supabase wipeAllData error:', e);
+      return false;
+    }
+  },
 };

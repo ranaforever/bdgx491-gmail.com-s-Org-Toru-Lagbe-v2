@@ -219,7 +219,7 @@ export const PrintableTicket: React.FC<PrintableTicketProps> = ({ booking, onClo
         </div>
 
         {/* Printable View Container */}
-        <div className="bg-slate-950/60 p-4 rounded-2xl border border-slate-800 overflow-x-auto flex flex-col items-center print:p-0 print:border-none print:bg-white print:overflow-visible">
+        <div id="printable-area" className="bg-slate-950/60 p-4 rounded-2xl border border-slate-800 overflow-x-auto flex flex-col items-center print:p-0 print:border-none print:bg-white print:overflow-visible">
           
           {/* 1. BUS TICKET SECTION */}
           {(printMode === 'ticket' || printMode === 'all-a4') && (

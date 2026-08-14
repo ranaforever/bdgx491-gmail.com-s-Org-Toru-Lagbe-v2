@@ -440,7 +440,7 @@ export const TicketTokenDesigner: React.FC<TicketTokenDesignerProps> = ({ onClos
           </div>
 
           {/* PRINTABLE A4 TICKET PAGES CONTAINER */}
-          <div className="space-y-8 flex flex-col items-center">
+          <div id="printable-area" className="space-y-8 flex flex-col items-center">
             {ticketPages.length === 0 ? (
               <div className="bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center text-slate-400 no-print">
                 <Ticket className="w-12 h-12 mx-auto mb-2 text-slate-600" />
@@ -698,7 +698,7 @@ export const TicketTokenDesigner: React.FC<TicketTokenDesignerProps> = ({ onClos
           </div>
 
           {/* PRINTABLE A4 FOOD TOKEN PAGES CONTAINER */}
-          <div className="space-y-8 flex flex-col items-center">
+          <div id="printable-area" className="space-y-8 flex flex-col items-center">
             {tokenPages.length === 0 ? (
               <div className="bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center text-slate-400 no-print">
                 <Utensils className="w-12 h-12 mx-auto mb-2 text-slate-600" />

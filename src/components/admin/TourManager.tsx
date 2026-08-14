@@ -3,6 +3,7 @@ import { Tour, BusType, TourStatus } from '../../types';
 import { StorageService } from '../../services/storage';
 import { CalculationUtils } from '../../utils/calculations';
 import { CSVExportService } from '../../utils/csvExport';
+import { useToast } from '../../context/ToastContext';
 import {
   Plus,
   Edit2,
@@ -17,6 +18,7 @@ import {
 } from 'lucide-react';
 
 export const TourManager: React.FC = () => {
+  const { showToast } = useToast();
   const [tours, setTours] = useState<Tour[]>(StorageService.getTours());
   const templates = StorageService.getTemplates();
   const hotels = StorageService.getHotels();
@@ -68,13 +70,14 @@ export const TourManager: React.FC = () => {
     setTours(updated);
     StorageService.saveTours(updated);
     setIsModalOpen(false);
+    showToast('ট্যুর প্যাকেজ সফলভাবে সংরক্ষণ করা হয়েছে!', 'success');
   };
 
   const handleDeleteTour = (tourId: string) => {
-    if (confirm('আপনি কি নিশ্চিত যে আপনি এই ট্যুরটি ডিলিট করতে চান?')) {
-      const updated = tours.filter((t) => t.id !== tourId);
-      setTours(updated);
-      StorageService.saveTours(updated);
+    if (confirm('আপনি কি নিশ্চিত যে আপনি এই ট্যুরটি স্থায়ীভাবে মুছে ফেলতে চান?')) {
+      StorageService.deleteTour(tourId);
+      setTours(StorageService.getTours());
+      showToast('ট্যুর প্যাকেজ স্থায়ীভাবে মুছে ফেলা হয়েছে!', 'info');
     }
   };
 

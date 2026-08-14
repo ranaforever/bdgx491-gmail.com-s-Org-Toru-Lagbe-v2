@@ -16,8 +16,10 @@ import { SettingsManager } from './components/admin/SettingsManager';
 import { PrintableTicket } from './components/print/PrintableTicket';
 import { LoginForm } from './components/auth/LoginForm';
 import { StorageService } from './services/storage';
+import { RealtimeService } from './services/realtimeService';
 import { CalculationUtils } from './utils/calculations';
 import { Booking, UserSession } from './types';
+import { ToastProvider } from './context/ToastContext';
 import { Menu, X } from 'lucide-react';
 
 const tabMetaMap: Record<string, { label: string }> = {
@@ -34,41 +36,57 @@ const tabMetaMap: Record<string, { label: string }> = {
   'settings': { label: 'সিস্টেম সেটিংস & ব্যাকআপ' },
 };
 
-export default function App() {
+function MainAppContent() {
   const [session, setSession] = useState<UserSession | null>(null);
   const [isAuthLoaded, setIsAuthLoaded] = useState(false);
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => StorageService.getTheme());
+  const [dataVersion, setDataVersion] = useState(0);
 
-  // Double click back button exit prompt handler
+  // Apply theme to document element whenever theme changes
   useEffect(() => {
-    let lastPopTime = 0;
-    const handlePopState = (e: PopStateEvent) => {
-      const now = Date.now();
-      if (now - lastPopTime > 2500) {
-        lastPopTime = now;
-        alert('Are you really want to exit? Please double click on back button.');
-        window.history.pushState(null, '', window.location.href);
-      }
+    if (theme === 'light') {
+      document.documentElement.classList.add('light-mode');
+    } else {
+      document.documentElement.classList.remove('light-mode');
+    }
+  }, [theme]);
+
+  // Storage sync and event listener for dynamic updates
+  useEffect(() => {
+    StorageService.init();
+
+    // Subscribe to global Supabase Realtime changes for bookings
+    const unsubscribeGlobalRealtime = RealtimeService.initGlobalBookingsSubscription(() => {
+      StorageService.syncFromSupabase();
+    });
+
+    const handleStorageUpdate = () => {
+      setDataVersion((v) => v + 1);
     };
 
-    window.history.pushState(null, '', window.location.href);
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    window.addEventListener('tour_lagbe_storage_updated', handleStorageUpdate);
+
+    // Sync from Supabase on focus or every 20s
+    const sync = () => StorageService.syncFromSupabase();
+    const interval = setInterval(sync, 20000);
+    window.addEventListener('focus', sync);
+
+    return () => {
+      unsubscribeGlobalRealtime();
+      window.removeEventListener('tour_lagbe_storage_updated', handleStorageUpdate);
+      clearInterval(interval);
+      window.removeEventListener('focus', sync);
+    };
   }, []);
 
   const toggleTheme = () => {
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(nextTheme);
-    if (nextTheme === 'light') {
-      document.documentElement.classList.add('light-mode');
-    } else {
-      document.documentElement.classList.remove('light-mode');
-    }
+    StorageService.saveTheme(nextTheme);
   };
 
-  // Initialize storage & auth session on mount
+  // Initialize auth session on mount
   useEffect(() => {
-    StorageService.getTours();
     const existingSession = StorageService.getAuthSession();
     setSession(existingSession);
     setIsAuthLoaded(true);
@@ -224,5 +242,13 @@ export default function App() {
         />
       )}
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <ToastProvider>
+      <MainAppContent />
+    </ToastProvider>
   );
 }

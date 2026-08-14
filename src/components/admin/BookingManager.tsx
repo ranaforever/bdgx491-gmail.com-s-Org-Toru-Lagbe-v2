@@ -3,6 +3,7 @@ import { Booking, BookingStatus, PaymentStatus, UserSession } from '../../types'
 import { StorageService } from '../../services/storage';
 import { CalculationUtils } from '../../utils/calculations';
 import { CSVExportService } from '../../utils/csvExport';
+import { useToast } from '../../context/ToastContext';
 import {
   BookmarkCheck,
   Search,
@@ -26,6 +27,7 @@ interface BookingManagerProps {
 }
 
 export const BookingManager: React.FC<BookingManagerProps> = ({ onViewTicket, session }) => {
+  const { showToast } = useToast();
   const [bookings, setBookings] = useState<Booking[]>(StorageService.getBookings());
   const tours = StorageService.getTours();
   const agents = StorageService.getAgents();
@@ -65,14 +67,15 @@ export const BookingManager: React.FC<BookingManagerProps> = ({ onViewTicket, se
     setBookings(updated);
     StorageService.saveBookings(updated);
     setPayingDueBooking(null);
+    showToast('বকেয়া টাকা জমা সফলভাবে আপডেট হয়েছে!', 'success');
   };
 
-  // Complete delete booking
+  // Permanent delete booking
   const handleDeleteBooking = (id: string, customerName: string) => {
     if (confirm(`আপনি কি নিশ্চিত যে "${customerName}" এর বুকিংটি স্থায়ীভাবে মুছে ফেলতে চান?`)) {
-      const updated = bookings.filter((b) => b.id !== id);
-      setBookings(updated);
-      StorageService.saveBookings(updated);
+      StorageService.deleteBooking(id);
+      setBookings(StorageService.getBookings());
+      showToast(`"${customerName}" এর বুকিং স্থায়ীভাবে মুছে ফেলা হয়েছে!`, 'info');
     }
   };
 
@@ -85,6 +88,7 @@ export const BookingManager: React.FC<BookingManagerProps> = ({ onViewTicket, se
     setBookings(updated);
     StorageService.saveBookings(updated);
     setEditingBooking(null);
+    showToast('বুকিংয়ের তথ্য সফলভাবে পরিবর্তন করা হয়েছে!', 'success');
   };
 
   const sessionAgent = agents.find(
@@ -361,18 +365,21 @@ export const BookingManager: React.FC<BookingManagerProps> = ({ onViewTicket, se
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-slate-400 font-semibold mb-1">মোট ফি (Payable Amount)</label>
+                  <label className="block text-slate-400 font-semibold mb-1">মোট সিট ফি (Total Fee)</label>
                   <input
                     type="number"
-                    value={editingBooking.payableAmount}
+                    value={editingBooking.totalFee || editingBooking.payableAmount}
                     onChange={(e) => {
-                      const pay = Number(e.target.value);
+                      const total = Number(e.target.value);
+                      const disc = editingBooking.discount || 0;
+                      const pay = Math.max(0, total - disc);
                       const due = Math.max(0, pay - editingBooking.advanceAmount);
                       const ps = due === 0 ? 'Paid' : editingBooking.advanceAmount > 0 ? 'Partial' : 'Unpaid';
                       setEditingBooking({
                         ...editingBooking,
+                        totalFee: total,
                         payableAmount: pay,
                         dueAmount: due,
                         paymentStatus: ps as PaymentStatus,
@@ -383,7 +390,31 @@ export const BookingManager: React.FC<BookingManagerProps> = ({ onViewTicket, se
                 </div>
 
                 <div>
-                  <label className="block text-slate-400 font-semibold mb-1">অগ্রিম জমা (Advance Paid)</label>
+                  <label className="block text-slate-400 font-semibold mb-1">ছাড় / ডিসকাউন্ট (৳)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editingBooking.discount || 0}
+                    onChange={(e) => {
+                      const disc = Math.max(0, Number(e.target.value));
+                      const total = editingBooking.totalFee || editingBooking.payableAmount;
+                      const pay = Math.max(0, total - disc);
+                      const due = Math.max(0, pay - editingBooking.advanceAmount);
+                      const ps = due === 0 ? 'Paid' : editingBooking.advanceAmount > 0 ? 'Partial' : 'Unpaid';
+                      setEditingBooking({
+                        ...editingBooking,
+                        discount: disc,
+                        payableAmount: pay,
+                        dueAmount: due,
+                        paymentStatus: ps as PaymentStatus,
+                      });
+                    }}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-amber-400 font-bold focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-400 font-semibold mb-1">অগ্রিম জমা (Advance)</label>
                   <input
                     type="number"
                     min="0"
@@ -402,6 +433,21 @@ export const BookingManager: React.FC<BookingManagerProps> = ({ onViewTicket, se
                     }}
                     className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-emerald-400 font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 text-xs bg-slate-950 p-3 rounded-xl border border-slate-800">
+                <div>
+                  <span className="text-slate-400 block">মোট নিট পেয়েবল (Payable):</span>
+                  <span className="font-bold text-white text-sm">
+                    {CalculationUtils.formatCurrency(editingBooking.payableAmount)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block">অবশিষ্ট বকেয়া (Due Amount):</span>
+                  <span className="font-bold text-rose-400 text-sm">
+                    {CalculationUtils.formatCurrency(editingBooking.dueAmount)}
+                  </span>
                 </div>
               </div>
 
