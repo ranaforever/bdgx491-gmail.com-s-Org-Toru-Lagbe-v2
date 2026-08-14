@@ -55,6 +55,8 @@ export interface Tour {
   endDate: string;
   fee: number; // Regular Fee per passenger
   discountAllowed: number; // Default discount or max discount
+  coupleExtraFee?: number; // Extra charge for couple package (e.g. 1000)
+  familyExtraFee?: number; // Extra charge for family package (e.g. 1500)
   busType: BusType;
   layoutTemplateId: string; // References BusLayoutTemplate
   totalSeats: number;
@@ -108,8 +110,10 @@ export interface Booking {
   passengerCount: number;
   passengers: Passenger[];
   totalFee: number;
+  extraCharge?: number; // Surcharge for Couple / Family packages
+  extraChargeReason?: string; // e.g. "Couple Package Surcharge"
   discount: number;
-  payableAmount: number; // totalFee - discount
+  payableAmount: number; // totalFee + extraCharge - discount
   advanceAmount: number;
   dueAmount: number; // payableAmount - advanceAmount
   paymentStatus: PaymentStatus;

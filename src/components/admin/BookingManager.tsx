@@ -365,9 +365,9 @@ export const BookingManager: React.FC<BookingManagerProps> = ({ onViewTicket, se
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                 <div>
-                  <label className="block text-slate-400 font-semibold mb-1">মোট সিট ফি (Total Fee)</label>
+                  <label className="block text-slate-400 font-semibold mb-1">মোট আসন ফি (Total)</label>
                   <input
                     type="number"
                     value={editingBooking.totalFee || editingBooking.payableAmount}
@@ -386,6 +386,23 @@ export const BookingManager: React.FC<BookingManagerProps> = ({ onViewTicket, se
                       });
                     }}
                     className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-400 font-semibold mb-1">কাপল/ফ্যামিলি চার্জ (+৳)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editingBooking.extraCharge || 0}
+                    onChange={(e) => {
+                      const ext = Math.max(0, Number(e.target.value));
+                      setEditingBooking({
+                        ...editingBooking,
+                        extraCharge: ext > 0 ? ext : undefined,
+                      });
+                    }}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-pink-300 font-bold focus:outline-none focus:ring-2 focus:ring-pink-500"
                   />
                 </div>
 

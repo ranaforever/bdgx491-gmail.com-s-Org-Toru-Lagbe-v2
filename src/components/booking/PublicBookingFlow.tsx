@@ -74,6 +74,7 @@ export const PublicBookingFlow: React.FC<PublicBookingFlowProps> = ({
 
   const [discountInput, setDiscountInput] = useState<number>(0);
   const [advanceInput, setAdvanceInput] = useState<number>(0);
+  const [customExtraCharge, setCustomExtraCharge] = useState<number | null>(null);
   const [passengersData, setPassengersData] = useState<Record<string, Partial<Passenger>>>({});
 
   const [confirmedBooking, setConfirmedBooking] = useState<Booking | null>(null);
@@ -87,6 +88,27 @@ export const PublicBookingFlow: React.FC<PublicBookingFlowProps> = ({
   const seatGenderMap = currentTour
     ? CalculationUtils.getSeatGenderMappingForTour(currentTour.id, allBookings)
     : {};
+
+  // Extra surcharge logic for Couple and Family
+  const defaultExtra =
+    groupType === 'Couple'
+      ? currentTour?.coupleExtraFee || 0
+      : groupType === 'Family'
+      ? currentTour?.familyExtraFee || 0
+      : 0;
+
+  const extraCharge = customExtraCharge !== null ? customExtraCharge : defaultExtra;
+  const extraChargeReason =
+    groupType === 'Couple'
+      ? 'কাপল প্যাকেজ অতিরিক্ত চার্জ'
+      : groupType === 'Family'
+      ? 'ফ্যামিলি প্যাকেজ অতিরিক্ত চার্জ'
+      : '';
+
+  // Reset custom extra charge when groupType or tour changes
+  useEffect(() => {
+    setCustomExtraCharge(null);
+  }, [groupType, selectedTourId]);
 
   // Join real-time WebSocket channel for seat locks on active tour
   useEffect(() => {
@@ -166,7 +188,8 @@ export const PublicBookingFlow: React.FC<PublicBookingFlowProps> = ({
 
   // Calculations
   const seatPrice = currentTour?.fee || 0;
-  const totalFee = selectedSeats.length * seatPrice;
+  const baseFee = selectedSeats.length * seatPrice;
+  const totalFee = baseFee + (extraCharge > 0 ? extraCharge : 0);
   const discount = Math.min(discountInput, totalFee);
   const payableAmount = Math.max(0, totalFee - discount);
   const advanceAmount = Math.min(advanceInput, payableAmount);
@@ -219,7 +242,7 @@ export const PublicBookingFlow: React.FC<PublicBookingFlowProps> = ({
       return;
     }
 
-    // Generate Passenger objects - 1st seat is always the primary customer
+    // Generate Passenger objects - with per-seat gender preservation
     const finalPassengers: Passenger[] = selectedSeats.map((seat, index) => {
       const seatPsg = passengersData[seat];
       const name =
@@ -236,13 +259,16 @@ export const PublicBookingFlow: React.FC<PublicBookingFlowProps> = ({
             ? seatPsg.phone
             : customerPhone;
 
+      const gender = (seatPsg?.gender as Gender) || (index === 0 ? customerGender : customerGender === 'Male' ? 'Female' : 'Male');
+      const religion = (seatPsg?.religion as Religion) || customerReligion || 'Islam';
+
       return {
         id: `psg-${Date.now()}-${index}`,
         bookingId: '',
         name,
         phone,
-        gender: index === 0 ? customerGender : ((seatPsg?.gender as Gender) || customerGender || 'Male'),
-        religion: index === 0 ? customerReligion : ((seatPsg?.religion as Religion) || customerReligion || 'Islam'),
+        gender,
+        religion,
         seatNumber: seat,
       };
     });
@@ -277,6 +303,8 @@ export const PublicBookingFlow: React.FC<PublicBookingFlowProps> = ({
       passengerCount: selectedSeats.length,
       passengers: finalPassengers.map((p) => ({ ...p, bookingId })),
       totalFee,
+      extraCharge: extraCharge > 0 ? extraCharge : undefined,
+      extraChargeReason: extraCharge > 0 ? extraChargeReason : undefined,
       discount,
       payableAmount,
       advanceAmount,
@@ -753,15 +781,15 @@ export const PublicBookingFlow: React.FC<PublicBookingFlowProps> = ({
                         </span>
                       </div>
 
-                      <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                      <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800 grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
                         <div>
-                          <span className="text-slate-400 text-[10px] block">যাত্রীর নাম:</span>
+                          <span className="text-slate-400 text-[10px] block mb-0.5">যাত্রীর নাম:</span>
                           <span className="font-bold text-white text-xs truncate block">
                             {customerName.trim() ? customerName : '১নং সেকশনে দেওয়া নাম বসবে'}
                           </span>
                         </div>
                         <div>
-                          <span className="text-slate-400 text-[10px] block">মোবাইল:</span>
+                          <span className="text-slate-400 text-[10px] block mb-0.5">মোবাইল:</span>
                           <span className="font-bold text-emerald-400 text-xs truncate block">
                             {customerPhone.trim() && customerPhone !== '+880 '
                               ? customerPhone
@@ -769,77 +797,168 @@ export const PublicBookingFlow: React.FC<PublicBookingFlowProps> = ({
                           </span>
                         </div>
                         <div>
-                          <span className="text-slate-400 text-[10px] block">লিঙ্গ ও ধর্ম:</span>
-                          <span className="font-semibold text-slate-300 text-xs">
-                            {customerGender === 'Female' ? 'নারী' : customerGender === 'Male' ? 'পুরুষ' : 'অন্যান্য'} ({customerReligion})
-                          </span>
+                          <span className="text-slate-400 text-[10px] block mb-1">সিটের লিঙ্গ (Gender):</span>
+                          <div className="flex bg-slate-950 p-0.5 rounded-lg border border-slate-800">
+                            {[
+                              { val: 'Male', label: '👨 পুরুষ' },
+                              { val: 'Female', label: '👩 নারী' },
+                              { val: 'Other', label: '👶 অন্যান্য' },
+                            ].map((g) => (
+                              <button
+                                key={g.val}
+                                type="button"
+                                onClick={() => {
+                                  setCustomerGender(g.val as Gender);
+                                  handlePassengerChange(selectedSeats[0], 'gender', g.val);
+                                }}
+                                className={`flex-1 py-1 text-[10px] font-bold rounded-md transition-all ${
+                                  customerGender === g.val
+                                    ? 'bg-emerald-500 text-slate-950 shadow-sm'
+                                    : 'text-slate-400 hover:text-white'
+                                }`}
+                              >
+                                {g.label}
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       </div>
 
                       <p className="text-[10px] text-emerald-400 flex items-center gap-1.5 pt-0.5">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                        <span>১ম সিটের জন্য অতিরিক্ত নাম/মোবাইল টাইপ করা লাগবে না, প্রধান তথ্য সরাসরি ব্যবহৃত হবে।</span>
+                        <span>১ম সিটের জন্য প্রধান তথ্য স্বয়ংক্রিয়ভাবে ব্যবহৃত হবে। লিঙ্গ প্রয়োজনে পরিবর্তন করতে পারেন।</span>
                       </p>
                     </div>
                   )}
 
-                  {/* Additional Seats: 2nd, 3rd, etc. (Optional Fields) */}
+                  {/* Additional Seats: 2nd, 3rd, etc. (Optional Fields with Per-Seat Gender) */}
                   {selectedSeats.length > 1 && (
                     <div className="space-y-3 pt-1">
                       <div className="flex items-center gap-2 text-[11px] font-bold text-slate-400">
                         <Users className="w-3.5 h-3.5 text-purple-400" />
-                        <span>সহযাত্রীদের তথ্য (ঐচ্ছিক - খালি রাখলেও বুকিং সম্পন্ন হবে):</span>
+                        <span>সহযাত্রীদের তথ্য ও লিঙ্গ নির্বাচন (Gender Per Seat):</span>
                       </div>
 
-                      {selectedSeats.slice(1).map((seat, idx) => (
-                        <div
-                          key={seat}
-                          className="bg-slate-800/50 border border-slate-700/60 rounded-2xl p-3.5 space-y-2.5"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className="bg-slate-700 text-white font-bold text-xs px-2.5 py-0.5 rounded-lg border border-slate-600">
-                                সিট: {seat}
+                      {selectedSeats.slice(1).map((seat, idx) => {
+                        const seatGender = (passengersData[seat]?.gender as Gender) || (customerGender === 'Male' ? 'Female' : 'Male');
+                        return (
+                          <div
+                            key={seat}
+                            className="bg-slate-800/50 border border-slate-700/60 rounded-2xl p-3.5 space-y-2.5"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="bg-slate-700 text-white font-bold text-xs px-2.5 py-0.5 rounded-lg border border-slate-600">
+                                  সিট: {seat}
+                                </span>
+                                <span className="text-[10px] text-purple-300 font-semibold bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-md">
+                                  সহযাত্রী #{idx + 2}
+                                </span>
+                              </div>
+                              <span className="text-[11px] text-slate-400">
+                                ফি: {CalculationUtils.formatCurrency(seatPrice)}
                               </span>
-                              <span className="text-[10px] text-purple-300 font-semibold bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-md">
-                                সহযাত্রী #{idx + 2} (ঐচ্ছিক)
-                              </span>
-                            </div>
-                            <span className="text-[11px] text-slate-400">
-                              ফি: {CalculationUtils.formatCurrency(seatPrice)}
-                            </span>
-                          </div>
-
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                            <div>
-                              <label className="block text-[10px] font-semibold text-slate-400 mb-1">
-                                যাত্রীর নাম (খালি রাখলে প্রধান নাম বসবে)
-                              </label>
-                              <input
-                                type="text"
-                                value={passengersData[seat]?.name || ''}
-                                onChange={(e) => handlePassengerChange(seat, 'name', e.target.value)}
-                                placeholder={customerName.trim() ? `${customerName} (${seat})` : `যাত্রী ${seat}`}
-                                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                              />
                             </div>
 
-                            <div>
-                              <label className="block text-[10px] font-semibold text-slate-400 mb-1">
-                                মোবাইল নম্বর (ঐচ্ছিক)
-                              </label>
-                              <input
-                                type="text"
-                                value={passengersData[seat]?.phone || ''}
-                                onChange={(e) => handlePassengerChange(seat, 'phone', e.target.value)}
-                                placeholder={customerPhone.trim() && customerPhone !== '+880 ' ? customerPhone : "+880..."}
-                                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                              />
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                              <div>
+                                <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                                  যাত্রীর নাম (ঐচ্ছিক)
+                                </label>
+                                <input
+                                  type="text"
+                                  value={passengersData[seat]?.name || ''}
+                                  onChange={(e) => handlePassengerChange(seat, 'name', e.target.value)}
+                                  placeholder={customerName.trim() ? `${customerName} (${seat})` : `যাত্রী ${seat}`}
+                                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                                  মোবাইল নম্বর (ঐচ্ছিক)
+                                </label>
+                                <input
+                                  type="text"
+                                  value={passengersData[seat]?.phone || ''}
+                                  onChange={(e) => handlePassengerChange(seat, 'phone', e.target.value)}
+                                  placeholder={customerPhone.trim() && customerPhone !== '+880 ' ? customerPhone : "+880..."}
+                                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                                  সিটের লিঙ্গ (Gender) *
+                                </label>
+                                <div className="flex bg-slate-900 p-0.5 rounded-xl border border-slate-700">
+                                  {[
+                                    { val: 'Male', label: '👨 পুরুষ' },
+                                    { val: 'Female', label: '👩 নারী' },
+                                    { val: 'Other', label: '👶 অন্যান্য' },
+                                  ].map((g) => (
+                                    <button
+                                      key={g.val}
+                                      type="button"
+                                      onClick={() => handlePassengerChange(seat, 'gender', g.val)}
+                                      className={`flex-1 py-1 text-[10px] font-bold rounded-lg transition-all ${
+                                        seatGender === g.val
+                                          ? 'bg-purple-600 text-white shadow-sm'
+                                          : 'text-slate-400 hover:text-white'
+                                      }`}
+                                    >
+                                      {g.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Extra Charge / Tour Surcharge Configuration */}
+            {(groupType === 'Couple' || groupType === 'Family' || (extraCharge && extraCharge > 0)) && (
+              <div className="bg-pink-950/20 border border-pink-500/30 rounded-2xl p-3.5 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-pink-300 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-pink-400" />
+                    <span>{groupType === 'Couple' ? '👫 কাপল প্যাকেজ অতিরিক্ত চার্জ' : '👨‍👩‍👧 ফ্যামিলি প্যাকেজ অতিরিক্ত চার্জ'}</span>
+                  </label>
+                  <span className="text-[10px] bg-pink-500/20 text-pink-300 font-bold px-2 py-0.5 rounded-md border border-pink-500/30">
+                    {extraChargeReason || 'প্যাকেজ সারচার্জ'}
+                  </span>
+                </div>
+
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-pink-400 font-bold text-xs">
+                    + ৳
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={extraCharge === 0 ? '' : extraCharge}
+                    onChange={(e) => setCustomExtraCharge(Math.max(0, Number(e.target.value)))}
+                    placeholder="অতিরিক্ত টাকার পরিমাণ লিখুন"
+                    className="w-full bg-slate-900 border border-pink-500/40 rounded-xl pl-9 pr-4 py-2 text-xs text-pink-300 font-bold focus:outline-none focus:ring-2 focus:ring-pink-500"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between text-[10px] text-slate-400">
+                  <span>ট্যুর নির্ধারিত ডিফল্ট চার্জ: ৳{defaultExtra}</span>
+                  {customExtraCharge !== null && (
+                    <button
+                      type="button"
+                      onClick={() => setCustomExtraCharge(null)}
+                      className="text-pink-400 hover:underline font-semibold"
+                    >
+                      ডিফল্টে রিসেট করুন
+                    </button>
                   )}
                 </div>
               </div>
@@ -973,23 +1092,32 @@ export const PublicBookingFlow: React.FC<PublicBookingFlowProps> = ({
             </div>
 
             {/* Financial Summary & Payment */}
-            <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 space-y-3">
+            <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 space-y-2.5">
               <div className="flex justify-between text-xs text-slate-400">
-                <span>মোট সিট ফি ({selectedSeats.length} টি):</span>
-                <span className="font-bold text-white">{CalculationUtils.formatCurrency(totalFee)}</span>
+                <span>আসন ফি ({selectedSeats.length} টি × {CalculationUtils.formatCurrency(seatPrice)}):</span>
+                <span className="font-bold text-white">{CalculationUtils.formatCurrency(baseFee)}</span>
               </div>
-              <div className="flex justify-between text-xs text-slate-400">
-                <span className="flex items-center gap-1">
-                  <Tag className="w-3 h-3 text-rose-400" />
-                  <span>ছাড় / ডিসকাউন্ট:</span>
-                </span>
-                <span className="font-bold text-rose-400">
-                  - {CalculationUtils.formatCurrency(discount)}
-                </span>
-              </div>
+              {extraCharge > 0 && (
+                <div className="flex justify-between text-xs text-pink-300">
+                  <span className="flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-pink-400" />
+                    <span>{extraChargeReason || 'কাপল/ফ্যামিলি চার্জ'}:</span>
+                  </span>
+                  <span className="font-bold">+ {CalculationUtils.formatCurrency(extraCharge)}</span>
+                </div>
+              )}
+              {discount > 0 && (
+                <div className="flex justify-between text-xs text-rose-400">
+                  <span className="flex items-center gap-1">
+                    <Tag className="w-3 h-3 text-rose-400" />
+                    <span>ছাড় / ডিসকাউন্ট:</span>
+                  </span>
+                  <span className="font-bold">- {CalculationUtils.formatCurrency(discount)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-sm font-bold text-white border-t border-slate-800 pt-2">
                 <span>মোট প্রদানযোগ্য (Net Payable):</span>
-                <span className="text-emerald-400 text-base">{CalculationUtils.formatCurrency(payableAmount)}</span>
+                <span className="text-emerald-400 text-base font-black">{CalculationUtils.formatCurrency(payableAmount)}</span>
               </div>
 
               <div className="grid grid-cols-2 gap-3 pt-2">

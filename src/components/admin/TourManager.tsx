@@ -198,30 +198,47 @@ export const TourManager: React.FC = () => {
                 </div>
               </div>
 
-              <div className="border-t border-slate-800 pt-4 flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] text-slate-400 block">ফি প্রতি জন</span>
-                  <span className="text-base font-black text-emerald-400">
-                    {CalculationUtils.formatCurrency(tour.fee)}
-                  </span>
+              <div className="border-t border-slate-800 pt-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] text-slate-400 block">ফি প্রতি জন</span>
+                    <span className="text-base font-black text-emerald-400">
+                      {CalculationUtils.formatCurrency(tour.fee)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleOpenEdit(tour)}
+                      className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl transition-colors"
+                      title="এডিট করুন"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteTour(tour.id)}
+                      className="p-2 bg-rose-950/40 hover:bg-rose-900/60 text-rose-400 border border-rose-800/40 rounded-xl transition-colors"
+                      title="ডিলিট করুন"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleOpenEdit(tour)}
-                    className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl transition-colors"
-                    title="এডিট করুন"
-                  >
-                    <Edit2 className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteTour(tour.id)}
-                    className="p-2 bg-rose-950/40 hover:bg-rose-900/60 text-rose-400 border border-rose-800/40 rounded-xl transition-colors"
-                    title="ডিলিট করুন"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+                {((tour.coupleExtraFee && tour.coupleExtraFee > 0) || (tour.familyExtraFee && tour.familyExtraFee > 0)) && (
+                  <div className="flex items-center gap-1.5 flex-wrap pt-1 text-[10px] border-t border-slate-800/60">
+                    {tour.coupleExtraFee && tour.coupleExtraFee > 0 ? (
+                      <span className="bg-pink-500/10 text-pink-300 border border-pink-500/20 px-2 py-0.5 rounded font-bold">
+                        👫 কাপল চার্জ: +{CalculationUtils.formatCurrency(tour.coupleExtraFee)}
+                      </span>
+                    ) : null}
+                    {tour.familyExtraFee && tour.familyExtraFee > 0 ? (
+                      <span className="bg-purple-500/10 text-purple-300 border border-purple-500/20 px-2 py-0.5 rounded font-bold">
+                        👨‍👩‍👧 ফ্যামিলি চার্জ: +{CalculationUtils.formatCurrency(tour.familyExtraFee)}
+                      </span>
+                    ) : null}
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -353,6 +370,37 @@ export const TourManager: React.FC = () => {
                     onChange={(e) => setEditingTour({ ...editingTour, discountAllowed: Number(e.target.value) })}
                     className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
+                </div>
+              </div>
+
+              {/* Couple and Family Extra Charges */}
+              <div className="grid grid-cols-2 gap-3 bg-slate-800/40 p-3 rounded-2xl border border-slate-700/60">
+                <div>
+                  <label className="block text-xs font-bold text-pink-400 mb-1">
+                    👫 কাপল প্যাকেজ অতিরিক্ত চার্জ (৳)
+                  </label>
+                  <input
+                    type="number"
+                    value={editingTour.coupleExtraFee || 0}
+                    onChange={(e) => setEditingTour({ ...editingTour, coupleExtraFee: Number(e.target.value) })}
+                    placeholder="e.g. 1000"
+                    className="w-full bg-slate-900 border border-pink-500/40 rounded-xl px-3 py-2 text-xs text-pink-300 font-bold focus:outline-none focus:ring-2 focus:ring-pink-500"
+                  />
+                  <span className="text-[10px] text-slate-400 mt-0.5 block">কাপল রুম/প্যাকেজ অতিরিক্ত ফি</span>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-purple-400 mb-1">
+                    👨‍👩‍👧 ফ্যামিলি প্যাকেজ অতিরিক্ত চার্জ (৳)
+                  </label>
+                  <input
+                    type="number"
+                    value={editingTour.familyExtraFee || 0}
+                    onChange={(e) => setEditingTour({ ...editingTour, familyExtraFee: Number(e.target.value) })}
+                    placeholder="e.g. 1500"
+                    className="w-full bg-slate-900 border border-purple-500/40 rounded-xl px-3 py-2 text-xs text-purple-300 font-bold focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                  <span className="text-[10px] text-slate-400 mt-0.5 block">ফ্যামিলি রুম/প্যাকেজ অতিরিক্ত ফি</span>
                 </div>
               </div>
 
